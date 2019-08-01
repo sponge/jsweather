@@ -1,0 +1,17 @@
+{
+  "name": "jsweather",
+  "version": "1.0.0",
+  "description": "90s weather is the best aesthetic",
+  "main": "index.js",
+  "dependencies": {
+    "canvas": "^2.5.0",
+    "gifencoder": "^2.0.1",
+    "moment": "^2.24.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "sponge",
+  "license": "ISC"
+}
