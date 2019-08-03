@@ -19,27 +19,27 @@ const Colors = {
 
 // dict of list of promises, so we can load all the images once without hitting the disk every time
 const Icons = {
-  'clear-day': Array(6).fill().map((e, i) => loadImage(`./res/clear-day/${i}.png`)),
-  'clear-night': Array(6).fill().map((e, i) => loadImage(`./res/clear-night/0.png`)),
-  'cloudy': Array(6).fill().map((e, i) => loadImage(`./res/cloudy/0.png`)),
-  'fog': Array(6).fill().map((e, i) => loadImage(`./res/fog/0.png`)),
-  'partly-cloudy-day': Array(6).fill().map((e, i) => loadImage(`./res/partly-cloudy-day/${i}.png`)),
-  'partly-cloudy-night': Array(6).fill().map((e, i) => loadImage(`./res/partly-cloudy-night/0.png`)),
-  'rain': Array(6).fill().map((e, i) => loadImage(`./res/rain/${i}.png`)),
-  'sleet': Array(6).fill().map((e, i) => loadImage(`./res/sleet/${i}.png`)),
-  'snow': Array(6).fill().map((e, i) => loadImage(`./res/snow/0.png`)),
-  'wind': Array(6).fill().map((e, i) => loadImage(`./res/wind/0.png`))
+  'clear-day': Array(6).fill().map((e, i) => loadImage(`${__dirname}/res/clear-day/${i}.png`)),
+  'clear-night': Array(6).fill().map((e, i) => loadImage(`${__dirname}/res/clear-night/0.png`)),
+  'cloudy': Array(6).fill().map((e, i) => loadImage(`${__dirname}/res/cloudy/0.png`)),
+  'fog': Array(6).fill().map((e, i) => loadImage(`${__dirname}/res/fog/0.png`)),
+  'partly-cloudy-day': Array(6).fill().map((e, i) => loadImage(`${__dirname}/res/partly-cloudy-day/${i}.png`)),
+  'partly-cloudy-night': Array(6).fill().map((e, i) => loadImage(`${__dirname}/res/partly-cloudy-night/0.png`)),
+  'rain': Array(6).fill().map((e, i) => loadImage(`${__dirname}/res/rain/${i}.png`)),
+  'sleet': Array(6).fill().map((e, i) => loadImage(`${__dirname}/res/sleet/${i}.png`)),
+  'snow': Array(6).fill().map((e, i) => loadImage(`${__dirname}/res/snow/0.png`)),
+  'wind': Array(6).fill().map((e, i) => loadImage(`${__dirname}/res/wind/0.png`))
 };
 
 // dict of promises for non-icon images to be loaded once
 const Images = {
-  'bg': loadImage('./res/background.png')
+  'bg': loadImage(`${__dirname}/res/background.png`)
 }
 
 // fonts used
-registerFont('./res/Star4000 Large.ttf', {family: 'Star4000 Large'});
-registerFont('./res/Star4000 Small.ttf', {family: 'Star4000 Small'});
-registerFont('./res/Star4000.ttf', {family: 'Star4000'});
+registerFont(`${__dirname}/res/Star4000 Large.ttf`, {family: 'Star4000 Large'});
+registerFont(`${__dirname}/res/Star4000 Small.ttf`, {family: 'Star4000 Small'});
+registerFont(`${__dirname}/res/Star4000.ttf`, {family: 'Star4000'});
 
 const Fonts = {
   smFont: '36px Star4000 Small',
@@ -94,7 +94,7 @@ async function drawCommands(ctx, cmds) {
   }
 }
 
-async function renderWeatherImage(info) {
+async function render(info) {
   const canvas = createCanvas(975, 575);
   const ctx = canvas.getContext('2d');
 
@@ -130,9 +130,6 @@ async function renderWeatherImage(info) {
   // the base image is done, use this as the background for the animated forecast
   const encoder = new GIFEncoder(975, 575);
 
-  // write to disk for dev
-  encoder.createReadStream().pipe(fs.createWriteStream(__dirname + '/weather.gif'));
-
   encoder.start();
   encoder.setRepeat(0);
   encoder.setDelay(100);
@@ -145,7 +142,7 @@ async function renderWeatherImage(info) {
     fctx.drawImage(canvas, 0, 0);
 
     let d = 0;
-    for (const day of weather.forecast) {
+    for (const day of info.forecast) {
       const shortDayStr = day.date.format('ddd').toUpperCase();
       const dayIcon = Icons[day.icon][f] || Icons['clear-day'][f];
       const cmds = [
@@ -171,10 +168,10 @@ async function renderWeatherImage(info) {
 
   encoder.finish();
 
-  // const buf = encoder.out.getData();
+  return encoder.out.getData();
 }
 
-const weather = {
+const exampleWeather = {
   address: "Lake Hopatcong 07849, NJ",
   unit: "F",
   date: moment(),
@@ -190,4 +187,18 @@ const weather = {
   ]
 };
 
-renderWeatherImage(weather);
+function getWeather(location, darkSkyApiKey) {
+  // FIXME: add rest of api stuff here
+  return render(exampleWeather)
+}
+
+if (require.main === module) {
+  (async function main() {
+    const gif = await getWeather('75287', 'asdf');
+    fs.writeFileSync(__dirname + '/weather.gif', gif)
+  })();
+}
+
+module.exports = {
+  getWeather
+};
