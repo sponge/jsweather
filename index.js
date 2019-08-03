@@ -41,6 +41,7 @@ registerFont(`${__dirname}/res/Star4000 Large.ttf`, {family: 'Star4000 Large'});
 registerFont(`${__dirname}/res/Star4000 Small.ttf`, {family: 'Star4000 Small'});
 registerFont(`${__dirname}/res/Star4000.ttf`, {family: 'Star4000'});
 
+// css style font strings used for canvas ctx.font
 const Fonts = {
   smFont: '36px Star4000 Small',
   mdFont: '36px Star4000',
@@ -77,10 +78,13 @@ async function drawCommands(ctx, cmds) {
       ctx.fillText(text, textX, y);
     }
 
+    // assume all shapes are rectangles for now
     if (cmd.shape) {
-      ctx.fillStyle = color;
-      ctx.rect(cmd.x, cmd.y, cmd.w, cmd.h);
-      ctx.fill();
+      if (cmd.shape === 'rectangle') {
+        ctx.fillStyle = color;
+        ctx.rect(cmd.x, cmd.y, cmd.w, cmd.h);
+        ctx.fill();
+      }
     }
 
     // if there's an image attached (which are promises), resolve and draw
@@ -134,6 +138,7 @@ async function render(info) {
   encoder.setRepeat(0);
   encoder.setDelay(100);
 
+  // each animated weather icon is either exactly 1 frame or 6 frames
   for (let f = 0; f < 6; f++) {
     const frame = createCanvas(975, 575);
     const fctx = frame.getContext('2d');
@@ -142,11 +147,12 @@ async function render(info) {
     fctx.drawImage(canvas, 0, 0);
 
     let d = 0;
+    // loop through each day in the extended forecast object, should be 4
     for (const day of info.forecast) {
       const shortDayStr = day.date.format('ddd').toUpperCase();
       const dayIcon = Icons[day.icon][f] || Icons['clear-day'][f];
       const cmds = [
-        // move the cursor to the top left of the content box
+        // move the painting cursor to the top left of the content box
         {x: 15 + 244 * d++, y: 90},
         // abbreviated day, icon, summary
         {font: Fonts.mdFont, text: shortDayStr, halign: 'center', color: Colors.Yellow, relative: true, x: 100, y: 40},
@@ -168,9 +174,11 @@ async function render(info) {
 
   encoder.finish();
 
+  // returns a Buffer
   return encoder.out.getData();
 }
 
+// example object of what render() takes for testing purposes
 const exampleWeather = {
   address: "Lake Hopatcong 07849, NJ",
   unit: "F",
@@ -189,6 +197,7 @@ const exampleWeather = {
 
 function getWeather(location, darkSkyApiKey) {
   // FIXME: add rest of api stuff here
+  // FIXME: make sure the time in the corner is the timezone of the weather location, not of the bot's pc
   return render(exampleWeather)
 }
 
