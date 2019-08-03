@@ -2,6 +2,9 @@ const { registerFont, loadImage, createCanvas } = require('canvas');
 const GIFEncoder = require('gifencoder');
 const fs = require('fs');
 const moment = require('moment');
+const fetch = require('node-fetch');
+const DarkSky = require('dark-sky');
+require('moment-timezone');
 
 // css style color presets, to be passed in ctx.fillStyle
 const Colors = {
@@ -47,6 +50,19 @@ const Fonts = {
   mdFont: '36px Star4000',
   lgFont: '32px Star4000 Large'
 };
+
+const IconDescriptions = {
+  'clear-day': 'Clear',
+  'clear-night': 'Clear',
+  'cloudy': 'Cloudy',
+  'fog': 'Fog',
+  'partly-cloudy-day': 'Partly\nCloudy',
+  'partly-cloudy-night': 'Partly\nCloudy',
+  'rain': 'Rain',
+  'sleet': 'Sleet',
+  'snow': 'Snow',
+  'wind': 'Wind'
+}
 
 // very light abstraction over drawing. loop through a set of drawing commands and blit them to the canvas
 // some stuff i don't purposefully support like right aligned images just because i never use them
@@ -105,19 +121,23 @@ async function render(info) {
   ctx.antialias = 'none';
 
   // strings we need for drawing commands
-
   const topDateLine = info.date.format('h:mm:ss A');
   const bottomDateLine = info.date.format('ddd MMM D');
   let tickerLine = info.alert ? info.alert + '\n' : '';
-  tickerLine += `Temp: ${info.temperature}°${info.unit}   Feels Like: ${info.feelsLike}°${info.unit}`;
+  tickerLine += `Temp: ${info.temperature}°${info.unit}   Feels Like: ${info.feelsLike}°${info.unit}   Humidity: ${info.humidity}%`;
 
-  // FIXME: red alert at bottom
+  // trim long address strings to fit
+  let address = info.address;
+  ctx.font = Fonts.mdFont;
+  while (ctx.measureText(address).width > 550) {
+    address = address.substring(0, address.length - 1 ).trim();
+  }
 
   const cmds = [
     {image: Images.bg, x: 0, y: 0},
 
     // top left address lines
-    {font: Fonts.mdFont, text: info.address, x: 150, y: 34},
+    {font: Fonts.mdFont, text: address, x: 150, y: 34},
     {font: Fonts.mdFont, text: "Extended Forecast", color: Colors.Yellow, relative: true, x: 0, y: 36},
 
     // top right clock
@@ -178,32 +198,51 @@ async function render(info) {
   return encoder.out.getData();
 }
 
-// example object of what render() takes for testing purposes
-const exampleWeather = {
-  address: "Lake Hopatcong 07849, NJ",
-  unit: "F",
-  date: moment(),
-  temperature: 75,
-  feelsLike: 76,
-  alert: undefined,
-  // alert: 'Severe Thunderstorm Watch',
-  forecast: [
-    { date: moment('2019-07-31'), icon: 'rain', summary: 'Rain', loTemp: 65, hiTemp: 80 },
-    { date: moment('2019-08-01'), icon: 'partly-cloudy-day', summary: 'Partly\nCloudy', loTemp: 64, hiTemp: 83 },
-    { date: moment('2019-08-02'), icon: 'cloudy', summary: 'Cloudy', loTemp: 65, hiTemp: 79 },
-    { date: moment('2019-08-03'), icon: 'rain', summary: 'Rain', loTemp: 64, hiTemp: 81 }
-  ]
-};
-
-function getWeather(location, darkSkyApiKey) {
+async function getWeather(location, bingKey, darkSkyKey) {
   // FIXME: add rest of api stuff here
   // FIXME: make sure the time in the corner is the timezone of the weather location, not of the bot's pc
-  return render(exampleWeather)
+  const darksky = new DarkSky(darkSkyKey);
+
+  const url = `http://dev.virtualearth.net/REST/v1/Locations/${encodeURI(location)}?includeNeighborhood=1&maxResults=1&include=queryParse&key=${bingKey}`;
+  const response = await fetch(url);
+  const jsonResponse = await response.json();
+
+  // unwrap microsoft's garbage api
+  const loc = jsonResponse.resourceSets[0].resources[0];
+  const coords = loc.geocodePoints[0].coordinates;
+  const address = loc.name;
+
+  const forecast = await darksky.options({
+    latitude: coords[0],
+    longitude: coords[1],
+    exclude: ['minutely', 'hourly'],
+    units: 'auto'
+  }).get();
+
+  const results = {
+    address: loc.name,
+    unit: forecast.flags.units !== 'us' ? 'C' : 'F',
+    date: moment(forecast.currently.time * 1000).tz(forecast.timezone),
+    temperature: forecast.currently.temperature.toFixed(0),
+    feelsLike: forecast.currently.apparentTemperature.toFixed(0),
+    humidity: (forecast.currently.humidity * 100).toFixed(0),
+    alert: forecast.alerts ? forecast.alerts.map(alert => alert.title).join(', ') : undefined,
+    forecast: forecast.daily.data.map(d => { return {
+      date: moment(d.time * 1000).tz(forecast.timezone),
+      icon: d.icon,
+      summary: IconDescriptions[d.icon] || d.icon,
+      loTemp: d.temperatureMin.toFixed(0),
+      hiTemp: d.temperatureMax.toFixed(0)
+    }}).slice(0, 4)
+  }
+
+  return render(results);
 }
 
 if (require.main === module) {
+  const config = require('./config.js');
   (async function main() {
-    const gif = await getWeather('75287', 'asdf');
+    const gif = await getWeather(config.location, config.bingKey, config.darkSkyKey);
     fs.writeFileSync(__dirname + '/weather.gif', gif)
   })();
 }
