@@ -130,7 +130,8 @@ async function render(info) {
   let address = info.address;
   ctx.font = Fonts.mdFont;
   while (ctx.measureText(address).width > 550) {
-    address = address.substring(0, address.length - 1 ).trim();
+    const end = address.lastIndexOf(',');
+    address = address.substring(0, end !== -1 ? end : address.length - 1 ).trim();
   }
 
   const cmds = [
