@@ -200,8 +200,6 @@ async function render(info) {
 }
 
 async function getWeather(location, bingKey, darkSkyKey) {
-  // FIXME: add rest of api stuff here
-  // FIXME: make sure the time in the corner is the timezone of the weather location, not of the bot's pc
   const darksky = new DarkSky(darkSkyKey);
 
   const url = `http://dev.virtualearth.net/REST/v1/Locations/${encodeURI(location)}?includeNeighborhood=1&maxResults=1&include=queryParse&key=${bingKey}`;
