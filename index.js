@@ -1,5 +1,6 @@
 const { registerFont, loadImage, createCanvas } = require('canvas');
 const fs = require('fs');
+const os = require('os');
 const gm = require('gm').subClass({imageMagick: true});;
 const moment = require('moment');
 const fetch = require('node-fetch');
@@ -184,12 +185,12 @@ async function render(info) {
     }
 
     const buf = frame.toBuffer('image/png');
-    fs.writeFileSync(`/tmp/weatherframe${f}.png`, buf);
+    fs.writeFileSync(`${os.tmpdir()}/weatherframe${f}.png`, buf);
   }
 
   return new Promise((resolve, reject) => {
     gm()
-    .in('-delay', '15', '/tmp/weatherframe*.png')
+    .in('-delay', '15', `${os.tmpdir()}/weatherframe*.png`)
     .in('-layers', 'OptimizeTransparency')
     .toBuffer('weather.gif', (err, buffer) => {
       if (err) { reject(err); }
