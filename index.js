@@ -1,6 +1,6 @@
 const { registerFont, loadImage, createCanvas } = require('canvas');
-const GIFEncoder = require('gifencoder');
 const fs = require('fs');
+const gm = require('gm').subClass({imageMagick: true});;
 const moment = require('moment');
 const fetch = require('node-fetch');
 const DarkSky = require('dark-sky');
@@ -152,13 +152,6 @@ async function render(info) {
 
   await drawCommands(ctx, cmds);
 
-  // the base image is done, use this as the background for the animated forecast
-  const encoder = new GIFEncoder(975, 575);
-
-  encoder.start();
-  encoder.setRepeat(0);
-  encoder.setDelay(100);
-
   // each animated weather icon is either exactly 1 frame or 6 frames
   for (let f = 0; f < 6; f++) {
     const frame = createCanvas(975, 575);
@@ -190,13 +183,19 @@ async function render(info) {
       await drawCommands(fctx, cmds);
     }
 
-    encoder.addFrame(fctx);
+    const buf = frame.toBuffer('image/png');
+    fs.writeFileSync(`/tmp/weatherframe${f}.png`, buf);
   }
 
-  encoder.finish();
-
-  // returns a Buffer
-  return encoder.out.getData();
+  return new Promise((resolve, reject) => {
+    gm()
+    .in('-delay', '15', '/tmp/weatherframe*.png')
+    .in('-layers', 'OptimizeTransparency')
+    .toBuffer('weather.gif', (err, buffer) => {
+      if (err) { reject(err); }
+      resolve(buffer);
+    });
+  });
 }
 
 async function getWeather(location, bingKey, darkSkyKey) {
