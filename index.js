@@ -1,11 +1,11 @@
 const { registerFont, loadImage, createCanvas } = require('canvas');
 const fs = require('fs');
 const os = require('os');
-const gm = require('gm').subClass({imageMagick: true});;
 const moment = require('moment');
 const fetch = require('node-fetch');
 const DarkSky = require('dark-sky');
 require('moment-timezone');
+const GIFEncoder = require('gif-encoder-2');
 
 // css style color presets, to be passed in ctx.fillStyle
 const Colors = {
@@ -118,6 +118,9 @@ async function drawCommands(ctx, cmds) {
 async function render(info) {
   const canvas = createCanvas(975, 575);
   const ctx = canvas.getContext('2d');
+  const encoder = new GIFEncoder(975, 575)
+  encoder.start()
+  encoder.setDelay(150)
 
   ctx.antialias = 'none';
 
@@ -184,18 +187,13 @@ async function render(info) {
       await drawCommands(fctx, cmds);
     }
 
-    const buf = frame.toBuffer('image/png');
-    fs.writeFileSync(`${os.tmpdir()}/weatherframe${f}.png`, buf);
+    encoder.addFrame(fctx);
   }
 
+  encoder.finish();
   return new Promise((resolve, reject) => {
-    gm()
-    .in('-delay', '15', `${os.tmpdir()}/weatherframe*.png`)
-    .in('-layers', 'OptimizeTransparency')
-    .toBuffer('weather.gif', (err, buffer) => {
-      if (err) { reject(err); }
-      resolve(buffer);
-    });
+    const buffer = encoder.out.getData();
+    resolve(buffer);
   });
 }
 
