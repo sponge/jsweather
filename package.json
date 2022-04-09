@@ -8,7 +8,7 @@
     "dark-sky": "^1.1.5",
     "gif-encoder-2": "^1.0.5",
     "gm": "^1.23.1",
-    "moment": "^2.24.0",
+    "moment": "^2.29.2",
     "moment-timezone": "^0.5.26",
     "node-fetch": "^2.6.0"
   },
