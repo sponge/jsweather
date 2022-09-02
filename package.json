@@ -4,7 +4,7 @@
   "description": "90s weather is the best aesthetic",
   "main": "index.js",
   "dependencies": {
-    "canvas": "^2.9.3",
+    "canvas": "^2.9.0",
     "dark-sky": "^1.1.5",
     "gif-encoder-2": "^1.0.5",
     "gm": "^1.23.1",
