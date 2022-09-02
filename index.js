@@ -208,7 +208,6 @@ async function renderText(title, body, ticker, date) {
   const topDateLine = date.format('h:mm:ss A');
   const bottomDateLine = date.format('ddd MMM D');
 
-  // trim long address strings to fit
   ctx.font = Fonts.mdFont;
 
   let cmds = [
