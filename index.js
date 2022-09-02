@@ -37,7 +37,8 @@ const Icons = {
 
 // dict of promises for non-icon images to be loaded once
 const Images = {
-  'bg': loadImage(`${__dirname}/res/background.png`)
+  'bg': loadImage(`${__dirname}/res/background.png`),
+  'textBg': loadImage(`${__dirname}/res/text-background.png`)
 }
 
 // fonts used
@@ -197,6 +198,51 @@ async function render(info) {
   });
 }
 
+async function renderText(title, body, ticker, date) {
+  const canvas = createCanvas(975, 575);
+  const ctx = canvas.getContext('2d');
+
+  ctx.antialias = 'none';
+
+  // strings we need for drawing commands
+  const topDateLine = date.format('h:mm:ss A');
+  const bottomDateLine = date.format('ddd MMM D');
+
+  // trim long address strings to fit
+  ctx.font = Fonts.mdFont;
+
+  let cmds = [
+    {image: Images.textBg, x: 0, y: 0},
+
+    // top left title
+    {font: Fonts.mdFont, color: Colors.Yellow, text: title, x: 150, y: 52},
+
+    // top right clock
+    {font: Fonts.smFont, text: topDateLine, x: 695, y: 45},
+    {font: Fonts.smFont, text: bottomDateLine, relative: true, x: 0, y: 25},
+
+    // bottom ticker
+    {shape: 'rectangle', color: Colors.Teal, x: 0, y: 479, w: 975, h: 96},
+    {font: Fonts.mdFont, text: ticker, x: 125, y: 510},
+  ];
+
+  await drawCommands(ctx, cmds);
+
+  cmds = body.split('\n').map((line, index) => ({
+    font: Fonts.mdFont,
+    text: line,
+    x: 125,
+    y: 150 + index * 45,
+  }));
+  await drawCommands(ctx, cmds);
+
+  return new Promise((resolve, reject) => {
+    const buffer = canvas.toBuffer('image/png');
+    resolve(buffer);
+  });
+}
+
+
 async function getWeather(location, bingKey, darkSkyKey) {
   const darksky = new DarkSky(darkSkyKey);
 
@@ -207,7 +253,6 @@ async function getWeather(location, bingKey, darkSkyKey) {
   // unwrap microsoft's garbage api
   const loc = jsonResponse.resourceSets[0].resources[0];
   const coords = loc.geocodePoints[0].coordinates;
-  const address = loc.name;
 
   const forecast = await darksky.options({
     latitude: coords[0],
@@ -239,11 +284,23 @@ async function getWeather(location, bingKey, darkSkyKey) {
 if (require.main === module) {
   const config = require('./config.js');
   (async function main() {
+    const body = `\
+GOOD DOG, GOODDOG GD
+Dogs:  00:43 Sun     14:32 Sun
+Dogs:   6:56 Sun     19:10 Sun
+
+GOOD DOG, GOODDOG GD
+Dogs:  00:43 Sun     14:32 Sun
+Dogs:   6:56 Sun     19:10 Sun`;
+    const png = await renderText('good dog', body, 'god = dog', moment());
+    fs.writeFileSync(__dirname + '/text.png', png);
+
     const gif = await getWeather(config.location, config.bingKey, config.darkSkyKey);
     fs.writeFileSync(__dirname + '/weather.gif', gif)
   })();
 }
 
 module.exports = {
-  getWeather
+  getWeather,
+  renderText,
 };
