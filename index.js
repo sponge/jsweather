@@ -256,7 +256,7 @@ async function getWeather(location, bingKey, pirateWeatherKey) {
   const country = loc.address.countryRegion;
   const units = country === 'United States' ? 'us' : 'si';
 
-  const pwResponse = await fetch(`https://api.pirateweather.net/forecast/${pirateWeatherKey}/${coords[0]},${coords[1]}?units=${units}`);
+  const pwResponse = await fetch(`https://api.pirateweather.net/forecast/${pirateWeatherKey}/${coords[0]},${coords[1]}?units=${units}&exclude=minutely,hourly`);
   const forecast = await pwResponse.json();
 
   const results = {
