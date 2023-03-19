@@ -3,7 +3,6 @@ const fs = require('fs');
 const os = require('os');
 const moment = require('moment');
 const fetch = require('node-fetch');
-const DarkSky = require('dark-sky');
 require('moment-timezone');
 const GIFEncoder = require('gif-encoder-2');
 
@@ -242,8 +241,7 @@ async function renderText(title, body, ticker, date) {
 }
 
 
-async function getWeather(location, bingKey, darkSkyKey) {
-  const darksky = new DarkSky(darkSkyKey);
+async function getWeather(location, bingKey, pirateWeatherKey) {
 
   const url = `http://dev.virtualearth.net/REST/v1/Locations/${encodeURI(location)}?includeNeighborhood=1&maxResults=1&include=queryParse&key=${bingKey}`;
   const response = await fetch(url);
@@ -253,12 +251,13 @@ async function getWeather(location, bingKey, darkSkyKey) {
   const loc = jsonResponse.resourceSets[0].resources[0];
   const coords = loc.geocodePoints[0].coordinates;
 
-  const forecast = await darksky.options({
-    latitude: coords[0],
-    longitude: coords[1],
-    exclude: ['minutely', 'hourly'],
-    units: 'auto'
-  }).get();
+  // pirateweather always uses us units even with units=auto
+  // instead ask for 'us' in the us, and 'si' everywhere else0
+  const country = loc.address.countryRegion;
+  const units = country === 'United States' ? 'us' : 'si';
+
+  const pwResponse = await fetch(`https://api.pirateweather.net/forecast/${pirateWeatherKey}/${coords[0]},${coords[1]}?units=${units}`);
+  const forecast = await pwResponse.json();
 
   const results = {
     address: loc.name,
@@ -294,7 +293,7 @@ Dogs:   6:56 Sun     19:10 Sun`;
     const png = await renderText('good dog', body, 'god = dog', moment());
     fs.writeFileSync(__dirname + '/text.png', png);
 
-    const gif = await getWeather(config.location, config.bingKey, config.darkSkyKey);
+    const gif = await getWeather(config.location, config.bingKey, config.pirateWeatherKey);
     fs.writeFileSync(__dirname + '/weather.gif', gif)
   })();
 }
